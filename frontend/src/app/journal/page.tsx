@@ -1,19 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
   Edit3,
-  Sparkles,
   Search,
-  Tag,
   Trash2,
   Calendar,
   CheckCircle2,
-  ArrowRight,
 } from "lucide-react";
 
 const availableEmotionTags = [
@@ -30,7 +25,6 @@ const availableEmotionTags = [
 ];
 
 export default function JournalPage() {
-  const router = useRouter();
   const { journalEntries, addJournalEntry, deleteJournalEntry } = useApp();
 
   const [title, setTitle] = useState("");
@@ -90,17 +84,9 @@ export default function JournalPage() {
         </div>
 
         {savedSuccess && (
-          <div className="p-4 rounded-2xl bg-[#dcc9fd] text-[#61527e] font-semibold text-sm flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-2">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5" />
-              <span>Your reflection has been saved safely!</span>
-            </div>
-            <Link
-              href="/reflection"
-              className="text-xs underline hover:text-[#21133c]"
-            >
-              Analyze with AI Reflection →
-            </Link>
+          <div className="p-4 rounded-2xl bg-[#dcc9fd] text-[#61527e] font-semibold text-sm flex items-center gap-2 shadow-sm animate-in fade-in slide-in-from-top-2">
+            <CheckCircle2 className="w-5 h-5" />
+            <span>Your reflection has been saved safely!</span>
           </div>
         )}
 
@@ -146,7 +132,7 @@ export default function JournalPage() {
                 </div>
               </div>
 
-              {/* Emotion Tags Selector */}
+              {/* Emotion Tags Selector (Functional Action) */}
               <div className="bg-white rounded-[28px] p-6 soft-glow border border-[#f8daef]/60">
                 <h3 className="font-sans text-xs font-bold text-[#514346] uppercase tracking-wider mb-3">
                   How are you feeling right now?
@@ -203,33 +189,24 @@ export default function JournalPage() {
 
           {/* Right Column: Search & Timeline Feed (5 cols) */}
           <div className="lg:col-span-5 flex flex-col gap-6">
-            {/* AI Deepen Reflection Prompt Banner */}
-            <div className="bg-[#ebddff] rounded-[28px] p-6 flex flex-col gap-3 relative overflow-hidden border border-[#d1bef1] hover:-translate-y-0.5 transition-transform">
+            {/* Mindful Reflection Tip Card (Informative) */}
+            <div className="bg-[#ebddff] rounded-[28px] p-6 flex flex-col gap-2 relative overflow-hidden border border-[#d1bef1]">
               <div className="absolute -right-8 -top-8 w-32 h-32 bg-[#d1bef1] rounded-full opacity-60 blur-xl" />
               <div className="relative z-10">
                 <h4 className="font-serif text-lg font-bold text-[#21133c] flex items-center gap-2">
-                  <span>Want to reflect a little deeper?</span>
+                  <span>Reflective Prompt</span>
                   <span className="text-[#76546b]">✦</span>
                 </h4>
                 <p className="text-xs text-[#4e3f6a] mt-1 leading-relaxed">
-                  Our AI companion can gently guide you through thoughtful prompts based on your recent entries.
+                  Writing freely without editing yourself is the fastest way to understand your underlying emotions.
                 </p>
-                <div className="mt-3 flex items-center justify-between">
-                  <span className="text-[10px] text-[#4e3f6a]/70">
-                    For self-reflection, not clinical diagnosis
-                  </span>
-                  <Link
-                    href="/reflection"
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#665783] hover:underline"
-                  >
-                    <span>Open AI Insights</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
+                <p className="text-[10px] text-[#4e3f6a]/70 mt-2">
+                  Encrypted & private · For self-reflection
+                </p>
               </div>
             </div>
 
-            {/* Search & Tag Filter Bar */}
+            {/* Search & Tag Filter Bar (Functional Actions) */}
             <div className="flex flex-col gap-3">
               <div className="relative">
                 <Search className="w-4 h-4 text-[#847376] absolute left-4 top-1/2 -translate-y-1/2" />

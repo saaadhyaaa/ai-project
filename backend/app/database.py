@@ -16,6 +16,7 @@ engine = create_async_engine(
     echo=settings.DEBUG,
     future=True,
     pool_pre_ping=True,
+    pool_recycle=300,
 )
 
 AsyncSessionLocal = async_sessionmaker(
@@ -41,7 +42,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def check_db_connection() -> dict:
     """
-    Attempts a lightweight query to test PostgreSQL database connectivity.
+    Attempts a lightweight query to test Supabase PostgreSQL database connectivity.
     Returns status dictionary.
     """
     try:
@@ -49,7 +50,7 @@ async def check_db_connection() -> dict:
             result = await conn.execute(text("SELECT 1"))
             scalar = result.scalar()
             if scalar == 1:
-                return {"status": "connected", "database": "postgresql"}
+                return {"status": "connected", "database": "supabase_postgresql"}
     except Exception as exc:
         return {"status": "disconnected", "error": str(exc)}
     return {"status": "unknown"}

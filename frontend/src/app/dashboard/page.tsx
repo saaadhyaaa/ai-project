@@ -6,13 +6,9 @@ import { useApp } from "@/context/AppContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
   Sparkles,
-  ArrowRight,
-  TrendingUp,
   Wind,
   Footprints,
   HeartHandshake,
-  CheckCircle2,
-  Calendar,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -42,30 +38,20 @@ export default function DashboardPage() {
     <AppLayout>
       <div className="flex flex-col gap-8">
         {/* Welcome Greeting Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold text-[#8a4b5e] leading-tight">
-              Good morning, {userName} <span className="text-[#76546b]">♡</span>
-            </h1>
-            <p className="text-base sm:text-lg text-[#514346] mt-2 font-sans">
-              Take a moment to check in with yourself.
-            </p>
-          </div>
-
-          <Link
-            href="/checkin"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#8a4b5e] text-white font-semibold text-sm hover:bg-[#733e4e] transition-colors shadow-md self-start sm:self-auto"
-          >
-            <span>Complete Today's Check-in</span>
-            <span className="text-base leading-none">✦</span>
-          </Link>
+        <div className="pt-2">
+          <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold text-[#8a4b5e] leading-tight">
+            Good morning, {userName} <span className="text-[#76546b]">♡</span>
+          </h1>
+          <p className="text-base sm:text-lg text-[#514346] mt-2 font-sans">
+            Take a moment to check in with yourself.
+          </p>
         </div>
 
         {/* Bento Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Column 1: Left Main (8 cols) */}
           <div className="lg:col-span-8 flex flex-col gap-6">
-            {/* Daily Check-in Hero Card */}
+            {/* Daily Check-in Hero Card (Primary Contextual Action) */}
             <section className="bg-white rounded-[28px] p-6 sm:p-8 soft-glow border border-[#f8daef]/60 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-[#d98fa3]/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
 
@@ -119,61 +105,63 @@ export default function DashboardPage() {
               </div>
             </section>
 
-            {/* This Week in Feelings Bar Chart */}
+            {/* This Week in Feelings Bar Chart (Informative) */}
             <section className="bg-white rounded-[28px] p-6 sm:p-8 soft-glow border border-[#f8daef]/60">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#271624]">
-                    Your week in feelings
-                  </h3>
-                  <p className="text-xs text-[#514346] mt-0.5">
-                    Mood levels recorded across the last 7 days
-                  </p>
-                </div>
-                <Link
-                  href="/trends"
-                  className="text-xs font-semibold text-[#8a4b5e] hover:underline flex items-center gap-1"
-                >
-                  <span>View Trends</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
+              <div className="mb-6">
+                <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#271624]">
+                  Your week in feelings
+                </h3>
+                <p className="text-xs text-[#514346] mt-0.5">
+                  Mood levels recorded across the last 7 days
+                </p>
               </div>
 
               {/* Bar visualization */}
-              <div className="h-48 w-full flex items-end justify-between gap-2 px-2 pt-6">
-                {checkIns.map((ci) => {
-                  const heightPercent = ci.mood * 20; // 20% to 100%
-                  const getBarColor = (mood: number) => {
-                    if (mood >= 4) return "bg-[#d98fa3] hover:bg-[#8a4b5e]";
-                    if (mood === 3) return "bg-[#dcc9fd] hover:bg-[#665783]";
-                    return "bg-[#fee0f5] hover:bg-[#dcc9fd]";
-                  };
+              {checkIns.length === 0 ? (
+                <div className="h-48 w-full flex flex-col items-center justify-center text-center p-6 rounded-2xl bg-[#ffeff8]/50 border border-dashed border-[#d6c1c5]/60">
+                  <p className="font-serif text-base font-semibold text-[#271624]">
+                    No check-ins recorded yet <span className="text-[#76546b]">♡</span>
+                  </p>
+                  <p className="text-xs text-[#514346] max-w-sm mt-1">
+                    Select a mood above or start today's check-in to see your weekly emotional progression!
+                  </p>
+                </div>
+              ) : (
+                <div className="h-48 w-full flex items-end justify-between gap-2 px-2 pt-6">
+                  {checkIns.slice(-7).map((ci) => {
+                    const heightPercent = ci.mood * 20; // 20% to 100%
+                    const getBarColor = (mood: number) => {
+                      if (mood >= 4) return "bg-[#d98fa3] hover:bg-[#8a4b5e]";
+                      if (mood === 3) return "bg-[#dcc9fd] hover:bg-[#665783]";
+                      return "bg-[#fee0f5] hover:bg-[#dcc9fd]";
+                    };
 
-                  return (
-                    <div
-                      key={ci.id}
-                      className="w-full flex flex-col items-center gap-2 h-full justify-end group cursor-pointer"
-                    >
-                      <div className="relative w-full flex justify-center h-full items-end">
-                        {/* Tooltip */}
-                        <div className="absolute -top-9 opacity-0 group-hover:opacity-100 transition-opacity bg-[#271624] text-white text-[10px] py-1 px-2 rounded-lg whitespace-nowrap z-20 pointer-events-none shadow-md">
-                          {ci.moodEmoji} {ci.moodLabel} ({ci.mood}/5)
+                    return (
+                      <div
+                        key={ci.id}
+                        className="w-full flex flex-col items-center gap-2 h-full justify-end group cursor-pointer"
+                      >
+                        <div className="relative w-full flex justify-center h-full items-end">
+                          {/* Tooltip */}
+                          <div className="absolute -top-9 opacity-0 group-hover:opacity-100 transition-opacity bg-[#271624] text-white text-[10px] py-1 px-2 rounded-lg whitespace-nowrap z-20 pointer-events-none shadow-md">
+                            {ci.moodEmoji} {ci.moodLabel} ({ci.mood}/5)
+                          </div>
+                          {/* Bar */}
+                          <div
+                            style={{ height: `${heightPercent}%` }}
+                            className={`w-8 sm:w-12 rounded-t-xl transition-all duration-300 shadow-xs ${getBarColor(
+                              ci.mood
+                            )}`}
+                          />
                         </div>
-                        {/* Bar */}
-                        <div
-                          style={{ height: `${heightPercent}%` }}
-                          className={`w-8 sm:w-12 rounded-t-xl transition-all duration-300 shadow-xs ${getBarColor(
-                            ci.mood
-                          )}`}
-                        />
+                        <span className="text-xs font-semibold text-[#514346]">
+                          {ci.dayName}
+                        </span>
                       </div>
-                      <span className="text-xs font-semibold text-[#514346]">
-                        {ci.dayName}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
 
             {/* Well-being Suggestions */}
@@ -182,7 +170,7 @@ export default function DashboardPage() {
                 Little things for you <span className="text-[#76546b]">♡</span>
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-white p-5 rounded-2xl soft-glow flex flex-col gap-3 hover:-translate-y-1 transition-transform border border-transparent hover:border-[#d98fa3]/30 cursor-pointer">
+                <div className="bg-white p-5 rounded-2xl soft-glow flex flex-col gap-3 border border-[#f8daef]/60">
                   <div className="w-11 h-11 rounded-full bg-[#dcc9fd] flex items-center justify-center text-[#61527e]">
                     <Wind className="w-5 h-5" />
                   </div>
@@ -196,7 +184,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <div className="bg-white p-5 rounded-2xl soft-glow flex flex-col gap-3 hover:-translate-y-1 transition-transform border border-transparent hover:border-[#d98fa3]/30 cursor-pointer">
+                <div className="bg-white p-5 rounded-2xl soft-glow flex flex-col gap-3 border border-[#f8daef]/60">
                   <div className="w-11 h-11 rounded-full bg-[#fee0f5] flex items-center justify-center text-[#8a4b5e]">
                     <Footprints className="w-5 h-5" />
                   </div>
@@ -210,7 +198,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <div className="bg-white p-5 rounded-2xl soft-glow flex flex-col gap-3 hover:-translate-y-1 transition-transform border border-transparent hover:border-[#d98fa3]/30 cursor-pointer">
+                <div className="bg-white p-5 rounded-2xl soft-glow flex flex-col gap-3 border border-[#f8daef]/60">
                   <div className="w-11 h-11 rounded-full bg-[#ffe7f7] flex items-center justify-center text-[#76546b]">
                     <HeartHandshake className="w-5 h-5" />
                   </div>
@@ -229,8 +217,8 @@ export default function DashboardPage() {
 
           {/* Column 2: Right Sidebar Panel (4 cols) */}
           <div className="lg:col-span-4 flex flex-col gap-6">
-            {/* AI Deepen Reflection Highlight */}
-            <div className="bg-[#ebddff] rounded-[28px] p-6 flex flex-col gap-4 relative overflow-hidden border border-[#d1bef1]">
+            {/* AI Reflection Observation Card (Informative) */}
+            <div className="bg-[#ebddff] rounded-[28px] p-6 flex flex-col gap-3 relative overflow-hidden border border-[#d1bef1]">
               <div className="absolute -right-8 -top-8 w-32 h-32 bg-[#d1bef1] rounded-full opacity-60 blur-xl" />
               <div className="relative z-10">
                 <div className="flex items-center gap-2 text-[#61527e] mb-2">
@@ -240,34 +228,19 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 <h3 className="font-serif text-xl font-bold text-[#21133c] leading-snug">
-                  Want to reflect a little deeper? <span className="text-[#76546b]">✦</span>
+                  Mindful Routine Noticed <span className="text-[#76546b]">✦</span>
                 </h3>
                 <p className="text-xs text-[#4e3f6a] mt-2 leading-relaxed">
                   MindEase noticed themes of proactive mindfulness and healthy routine building across your recent logs.
                 </p>
-                <Link
-                  href="/reflection"
-                  className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#665783] text-white text-xs font-semibold hover:bg-[#52446d] transition-colors shadow-sm"
-                >
-                  <span>Explore Insights</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
               </div>
             </div>
 
-            {/* Recent Reflections Card */}
+            {/* Recent Reflections Card (Informative) */}
             <div className="bg-white rounded-[28px] p-6 soft-glow border border-[#f8daef]/60 flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-serif text-lg font-bold text-[#271624]">
-                  Recent Journal
-                </h3>
-                <Link
-                  href="/journal"
-                  className="text-xs font-semibold text-[#8a4b5e] hover:underline"
-                >
-                  View all
-                </Link>
-              </div>
+              <h3 className="font-serif text-lg font-bold text-[#271624]">
+                Recent Reflection
+              </h3>
 
               {latestJournal ? (
                 <div className="p-4 rounded-2xl bg-[#ffeff8] border border-[#d6c1c5]/30 flex flex-col gap-2">
@@ -297,13 +270,6 @@ export default function DashboardPage() {
               ) : (
                 <p className="text-xs text-[#514346]">No reflections yet.</p>
               )}
-
-              <Link
-                href="/journal"
-                className="w-full py-2.5 rounded-full border border-[#8a4b5e] text-[#8a4b5e] text-xs font-semibold hover:bg-[#fee0f5] transition-colors text-center block mt-1"
-              >
-                Write in Journal
-              </Link>
             </div>
 
             {/* Quick Metrics Snapshot */}

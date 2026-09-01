@@ -56,164 +56,54 @@ interface AppContextType {
   };
 }
 
-const defaultCheckIns: CheckInRecord[] = [
-  {
-    id: "ci-1",
-    date: "2026-08-26",
-    dayName: "Mon",
-    mood: 3,
-    moodLabel: "Okay",
-    moodEmoji: "😐",
-    stress: 6,
-    energy: 5,
-    factors: ["Work", "Sleep"],
-    note: "Busy start of the week with meetings.",
-  },
-  {
-    id: "ci-2",
-    date: "2026-08-27",
-    dayName: "Tue",
-    mood: 4,
-    moodLabel: "Good",
-    moodEmoji: "🙂",
-    stress: 5,
-    energy: 7,
-    factors: ["Exercise", "Focus"],
-    note: "Went for a morning walk in the park.",
-  },
-  {
-    id: "ci-3",
-    date: "2026-08-28",
-    dayName: "Wed",
-    mood: 2,
-    moodLabel: "Bad",
-    moodEmoji: "😔",
-    stress: 7,
-    energy: 4,
-    factors: ["Workload", "Fatigue"],
-    note: "Felt a bit overwhelmed with deadlines.",
-  },
-  {
-    id: "ci-4",
-    date: "2026-08-29",
-    dayName: "Thu",
-    mood: 5,
-    moodLabel: "Great",
-    moodEmoji: "✨",
-    stress: 3,
-    energy: 8,
-    factors: ["Social", "Accomplishment"],
-    note: "Wrapped up the big milestone project!",
-  },
-  {
-    id: "ci-5",
-    date: "2026-08-30",
-    dayName: "Fri",
-    mood: 4,
-    moodLabel: "Good",
-    moodEmoji: "🙂",
-    stress: 4,
-    energy: 7,
-    factors: ["Friends", "Relaxation"],
-    note: "Nice dinner with close friends.",
-  },
-  {
-    id: "ci-6",
-    date: "2026-08-31",
-    dayName: "Sat",
-    mood: 3,
-    moodLabel: "Okay",
-    moodEmoji: "😐",
-    stress: 3,
-    energy: 6,
-    factors: ["Family", "Rest"],
-    note: "Quiet restful Saturday afternoon.",
-  },
-  {
-    id: "ci-7",
-    date: "2026-09-01",
-    dayName: "Sun",
-    mood: 4,
-    moodLabel: "Good",
-    moodEmoji: "🙂",
-    stress: 4,
-    energy: 7,
-    factors: ["Mindfulness", "Reading"],
-    note: "Taking time to journal and set intentions.",
-  },
-];
-
-const defaultJournalEntries: JournalRecord[] = [
-  {
-    id: "j-1",
-    title: "Finding stillness amidst a busy week",
-    content:
-      "Today I realized that even when my schedule is packed with deadlines, taking five deep breaths before each meeting completely transforms my anxiety. I want to keep practicing this micro-grounding habit.",
-    date: "Sept 1, 2026",
-    timeAgo: "2 hours ago",
-    tags: ["Calm", "Grateful", "Motivated"],
-    sentiment: "Calm",
-    aiInsights:
-      "MindEase noticed themes of proactive boundary setting and mindfulness coping mechanisms in this reflection.",
-  },
-  {
-    id: "j-2",
-    title: "Reflections on walking in nature",
-    content:
-      "The morning air was crisp and refreshing. Stepping away from screens allowed my thoughts to untangle naturally. Grateful for the quiet moments before the rush begins.",
-    date: "Aug 30, 2026",
-    timeAgo: "2 days ago",
-    tags: ["Happy", "Grateful"],
-    sentiment: "Positive",
-    aiInsights:
-      "Time in green spaces strongly correlates with your reported energy boosts across your weekly logs.",
-  },
-  {
-    id: "j-3",
-    title: "Navigating Wednesday's fatigue",
-    content:
-      "Wednesday felt unusually heavy. I struggled with focus and felt overwhelmed by pending tasks. Reminding myself that it is okay to rest and ask for support when needed.",
-    date: "Aug 28, 2026",
-    timeAgo: "4 days ago",
-    tags: ["Tired", "Overwhelmed"],
-    sentiment: "Reflective",
-    aiInsights:
-      "Acknowledging fatigue without self-criticism is a powerful emotional resilience milestone.",
-  },
-];
-
-const defaultNotifications: NotificationItem[] = [
-  {
-    id: "n-1",
-    title: "Daily Check-in Reminder",
-    message: "Take 60 seconds to notice how your mind and body feel right now ♡",
-    time: "10 mins ago",
-    read: false,
-  },
-  {
-    id: "n-2",
-    title: "Weekly Mood Pattern Ready",
-    message: "Your emotional trend report for this week is ready to view in Trends.",
-    time: "3 hours ago",
-    read: false,
-  },
-  {
-    id: "n-3",
-    title: "Mindfulness Suggestion",
-    message: "Try a 3-minute box breathing session to ease your midday transition.",
-    time: "Yesterday",
-    read: true,
-  },
-];
-
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [userName] = useState("Alex");
-  const [checkIns, setCheckIns] = useState<CheckInRecord[]>(defaultCheckIns);
-  const [journalEntries, setJournalEntries] = useState<JournalRecord[]>(defaultJournalEntries);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(defaultNotifications);
+  const [checkIns, setCheckIns] = useState<CheckInRecord[]>([]);
+  const [journalEntries, setJournalEntries] = useState<JournalRecord[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [timeframe, setTimeframe] = useState<"7" | "14" | "30">("7");
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedCheckIns = localStorage.getItem("mindease_checkins");
+      if (savedCheckIns) setCheckIns(JSON.parse(savedCheckIns));
+
+      const savedJournals = localStorage.getItem("mindease_journals");
+      if (savedJournals) setJournalEntries(JSON.parse(savedJournals));
+
+      const savedNotifs = localStorage.getItem("mindease_notifications");
+      if (savedNotifs) setNotifications(JSON.parse(savedNotifs));
+    } catch {
+      // ignore JSON parse or storage errors
+    }
+    setIsHydrated(true);
+  }, []);
+
+  // Save to localStorage on state changes
+  useEffect(() => {
+    if (!isHydrated) return;
+    try {
+      localStorage.setItem("mindease_checkins", JSON.stringify(checkIns));
+    } catch {}
+  }, [checkIns, isHydrated]);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    try {
+      localStorage.setItem("mindease_journals", JSON.stringify(journalEntries));
+    } catch {}
+  }, [journalEntries, isHydrated]);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    try {
+      localStorage.setItem("mindease_notifications", JSON.stringify(notifications));
+    } catch {}
+  }, [notifications, isHydrated]);
 
   const addCheckIn = (data: Omit<CheckInRecord, "id" | "date" | "dayName">) => {
     const today = new Date();
@@ -224,7 +114,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       date: today.toISOString().split("T")[0],
       dayName: days[today.getDay()],
     };
-    setCheckIns((prev) => [...prev.slice(1), newRecord]);
+    setCheckIns((prev) => [...prev, newRecord]);
   };
 
   const addJournalEntry = (data: { title: string; content: string; tags: string[] }) => {
@@ -253,14 +143,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  // Compute stats
-  const avgMood = 7.2;
-  const avgStress = 5.0;
-  const avgEnergy = 7.0;
-  const streakDays = 7;
-  const moodDelta = 0.8;
-  const stressDelta = -0.2;
-  const energyDelta = 1.1;
+  // Compute dynamic stats from actual user check-ins
+  const count = checkIns.length;
+  const avgMood = count > 0 ? Number((checkIns.reduce((acc, c) => acc + c.mood * 2, 0) / count).toFixed(1)) : 0;
+  const avgStress = count > 0 ? Number((checkIns.reduce((acc, c) => acc + c.stress, 0) / count).toFixed(1)) : 0;
+  const avgEnergy = count > 0 ? Number((checkIns.reduce((acc, c) => acc + c.energy, 0) / count).toFixed(1)) : 0;
+  const streakDays = count;
+  const moodDelta = count > 1 ? Number((checkIns[count - 1].mood * 2 - checkIns[0].mood * 2).toFixed(1)) : 0;
+  const stressDelta = count > 1 ? Number((checkIns[count - 1].stress - checkIns[0].stress).toFixed(1)) : 0;
+  const energyDelta = count > 1 ? Number((checkIns[count - 1].energy - checkIns[0].energy).toFixed(1)) : 0;
 
   return (
     <AppContext.Provider

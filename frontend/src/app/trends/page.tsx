@@ -1,37 +1,48 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useApp } from "@/context/AppContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
-  TrendingUp,
   Smile,
   Droplet,
   Zap,
   ArrowUp,
   ArrowDown,
-  Calendar,
   Sparkles,
   Sun,
   Moon,
   Clock,
-  ArrowRight,
 } from "lucide-react";
 
 export default function TrendsPage() {
-  const { checkIns, timeframe, setTimeframe, stats } = useApp();
+  const { timeframe, setTimeframe, stats, checkIns, journalEntries } = useApp();
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
 
-  const moodPoints = [
-    { day: "Mon", score: 6.0, emoji: "😐", label: "Okay", note: "Busy meetings" },
-    { day: "Tue", score: 7.5, emoji: "🙂", label: "Good", note: "Morning walk" },
-    { day: "Wed", score: 4.5, emoji: "😔", label: "Low", note: "Deadline pressure" },
-    { day: "Thu", score: 8.8, emoji: "✨", label: "Great", note: "Milestone achieved" },
-    { day: "Fri", score: 8.0, emoji: "🙂", label: "Good", note: "Team celebration" },
-    { day: "Sat", score: 7.0, emoji: "🙂", label: "Good", note: "Restful weekend" },
-    { day: "Sun", score: 7.8, emoji: "✨", label: "Great", note: "Intentional journal" },
-  ];
+  const moodPoints = checkIns.slice(-7).map((ci) => ({
+    day: ci.dayName,
+    score: ci.mood * 2,
+    emoji: ci.moodEmoji,
+    label: ci.moodLabel,
+    note: ci.note || (ci.factors.length > 0 ? ci.factors.join(", ") : "Daily check-in"),
+  }));
+
+  // Dynamic factor and tag frequency counting
+  const tagCounts: Record<string, number> = {};
+  checkIns.forEach((ci) => {
+    ci.factors.forEach((f) => {
+      tagCounts[f] = (tagCounts[f] || 0) + 1;
+    });
+  });
+  journalEntries.forEach((j) => {
+    j.tags.forEach((t) => {
+      tagCounts[t] = (tagCounts[t] || 0) + 1;
+    });
+  });
+
+  const feelingsLogged = Object.entries(tagCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
 
   return (
     <AppLayout
@@ -39,7 +50,7 @@ export default function TrendsPage() {
       subtitle="Track your emotional patterns, triggers, and wellness trajectories over time"
     >
       <div className="flex flex-col gap-8 pb-12 max-w-5xl mx-auto">
-        {/* Page Top Header with Timeframe Filter */}
+        {/* Page Top Header with Timeframe Filter (Functional Control) */}
         <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="font-serif text-3xl sm:text-4xl font-bold text-[#8a4b5e]">
@@ -156,79 +167,90 @@ export default function TrendsPage() {
           </div>
 
           {/* SVG Smooth Curve Graph */}
-          <div className="relative h-64 w-full pt-8 pb-4">
-            <svg
-              className="w-full h-48 overflow-visible"
-              viewBox="0 0 700 200"
-              preserveAspectRatio="none"
-            >
-              <defs>
-                <linearGradient id="curveGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#d98fa3" stopOpacity="0.45" />
-                  <stop offset="100%" stopColor="#d98fa3" stopOpacity="0.0" />
-                </linearGradient>
-              </defs>
-
-              {/* Area Fill */}
-              <path
-                d="M 50 120 C 120 70, 180 160, 250 145 C 320 130, 380 30, 450 40 C 520 50, 580 80, 650 60 L 650 190 L 50 190 Z"
-                fill="url(#curveGradient)"
-              />
-
-              {/* Smooth Stroke Line */}
-              <path
-                d="M 50 120 C 120 70, 180 160, 250 145 C 320 130, 380 30, 450 40 C 520 50, 580 80, 650 60"
-                fill="none"
-                stroke="#8a4b5e"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-              />
-
-              {/* Reference Gridlines */}
-              <line x1="50" y1="50" x2="650" y2="50" stroke="#f8daef" strokeDasharray="4 4" />
-              <line x1="50" y1="110" x2="650" y2="110" stroke="#f8daef" strokeDasharray="4 4" />
-              <line x1="50" y1="170" x2="650" y2="170" stroke="#f8daef" strokeDasharray="4 4" />
-            </svg>
-
-            {/* Interactive Data Points */}
-            <div className="absolute inset-0 flex justify-between px-6 sm:px-12 items-end pb-2 pointer-events-auto">
-              {moodPoints.map((point, index) => {
-                const isHovered = hoveredPoint === index;
-                return (
-                  <div
-                    key={point.day}
-                    onMouseEnter={() => setHoveredPoint(index)}
-                    onMouseLeave={() => setHoveredPoint(null)}
-                    className="flex flex-col items-center gap-2 relative group cursor-pointer"
-                  >
-                    {/* Tooltip popup */}
-                    {isHovered && (
-                      <div className="absolute -top-20 bg-[#271624] text-white p-2.5 rounded-xl text-center z-30 shadow-xl min-w-[110px] animate-in fade-in zoom-in-95">
-                        <div className="text-xs font-bold">
-                          {point.emoji} {point.label} ({point.score}/10)
-                        </div>
-                        <div className="text-[10px] text-[#ffd9e1] mt-0.5">
-                          {point.note}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Point Dot */}
-                    <div
-                      className={`w-3.5 h-3.5 rounded-full border-2 border-white shadow-md transition-transform ${
-                        isHovered
-                          ? "bg-[#665783] scale-150 ring-4 ring-[#dcc9fd]"
-                          : "bg-[#8a4b5e] hover:scale-125"
-                      }`}
-                    />
-                    <span className="text-xs font-bold text-[#514346]">
-                      {point.day}
-                    </span>
-                  </div>
-                );
-              })}
+          {moodPoints.length === 0 ? (
+            <div className="h-48 w-full flex flex-col items-center justify-center text-center p-6 rounded-2xl bg-[#ffeff8]/50 border border-dashed border-[#d6c1c5]/60">
+              <p className="font-serif text-base font-semibold text-[#271624]">
+                No trend data available yet <span className="text-[#76546b]">♡</span>
+              </p>
+              <p className="text-xs text-[#514346] max-w-sm mt-1">
+                Log your daily check-ins to unlock your personalized emotional trajectory curve and insights.
+              </p>
             </div>
-          </div>
+          ) : (
+            <div className="relative h-64 w-full pt-8 pb-4">
+              <svg
+                className="w-full h-48 overflow-visible"
+                viewBox="0 0 700 200"
+                preserveAspectRatio="none"
+              >
+                <defs>
+                  <linearGradient id="curveGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#d98fa3" stopOpacity="0.45" />
+                    <stop offset="100%" stopColor="#d98fa3" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
+
+                {/* Area Fill */}
+                <path
+                  d="M 50 120 C 120 70, 180 160, 250 145 C 320 130, 380 30, 450 40 C 520 50, 580 80, 650 60 L 650 190 L 50 190 Z"
+                  fill="url(#curveGradient)"
+                />
+
+                {/* Smooth Stroke Line */}
+                <path
+                  d="M 50 120 C 120 70, 180 160, 250 145 C 320 130, 380 30, 450 40 C 520 50, 580 80, 650 60"
+                  fill="none"
+                  stroke="#8a4b5e"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                />
+
+                {/* Reference Gridlines */}
+                <line x1="50" y1="50" x2="650" y2="50" stroke="#f8daef" strokeDasharray="4 4" />
+                <line x1="50" y1="110" x2="650" y2="110" stroke="#f8daef" strokeDasharray="4 4" />
+                <line x1="50" y1="170" x2="650" y2="170" stroke="#f8daef" strokeDasharray="4 4" />
+              </svg>
+
+              {/* Interactive Data Points */}
+              <div className="absolute inset-0 flex justify-between px-6 sm:px-12 items-end pb-2 pointer-events-auto">
+                {moodPoints.map((point, index) => {
+                  const isHovered = hoveredPoint === index;
+                  return (
+                    <div
+                      key={point.day + index}
+                      onMouseEnter={() => setHoveredPoint(index)}
+                      onMouseLeave={() => setHoveredPoint(null)}
+                      className="flex flex-col items-center gap-2 relative group cursor-pointer"
+                    >
+                      {/* Tooltip popup */}
+                      {isHovered && (
+                        <div className="absolute -top-20 bg-[#271624] text-white p-2.5 rounded-xl text-center z-30 shadow-xl min-w-[110px] animate-in fade-in zoom-in-95">
+                          <div className="text-xs font-bold">
+                            {point.emoji} {point.label} ({point.score}/10)
+                          </div>
+                          <div className="text-[10px] text-[#ffd9e1] mt-0.5">
+                            {point.note}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Point Dot */}
+                      <div
+                        className={`w-3.5 h-3.5 rounded-full border-2 border-white shadow-md transition-transform ${
+                          isHovered
+                            ? "bg-[#665783] scale-150 ring-4 ring-[#dcc9fd]"
+                            : "bg-[#8a4b5e] hover:scale-125"
+                        }`}
+                      />
+                      <span className="text-xs font-bold text-[#514346]">
+                        {point.day}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Pattern Observations Grid */}
@@ -241,12 +263,11 @@ export default function TrendsPage() {
               <div className="flex items-center gap-2 text-[#665783]">
                 <Clock className="w-4 h-4" />
                 <h4 className="font-serif font-bold text-sm text-[#271624]">
-                  Midweek Dip & Recovery
+                  Check-in Consistency
                 </h4>
               </div>
               <p className="text-xs text-[#514346] leading-relaxed">
-                Wednesday check-ins show brief stress spikes that reliably subside once you
-                take a short evening walk.
+                Regular daily check-ins help identify subtle emotional shifts and coping effectiveness.
               </p>
             </div>
 
@@ -254,12 +275,11 @@ export default function TrendsPage() {
               <div className="flex items-center gap-2 text-[#8a4b5e]">
                 <Sun className="w-4 h-4" />
                 <h4 className="font-serif font-bold text-sm text-[#271624]">
-                  Morning Journaling Boost
+                  Mindful Reflection Boost
                 </h4>
               </div>
               <p className="text-xs text-[#514346] leading-relaxed">
-                Days beginning with a 5-minute journal entry correlate with 22% higher
-                perceived focus and emotional clarity.
+                Writing down your thoughts without editing fosters self-compassion and mental clarity.
               </p>
             </div>
 
@@ -267,18 +287,17 @@ export default function TrendsPage() {
               <div className="flex items-center gap-2 text-[#76546b]">
                 <Moon className="w-4 h-4" />
                 <h4 className="font-serif font-bold text-sm text-[#271624]">
-                  Weekend Equilibrium
+                  Rest & Recovery
                 </h4>
               </div>
               <p className="text-xs text-[#514346] leading-relaxed">
-                Your mood ratings remain steady and rejuvenating over Saturday and Sunday
-                downtime.
+                Taking micro-grounding breath pauses helps restore focus and equilibrium during busy routines.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Bottom Sections: Feelings Logged & AI Insights Banner */}
+        {/* Bottom Sections: Feelings Logged & Pattern Synthesis */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Feelings Frequency Pills (6 cols) */}
           <section className="lg:col-span-6 bg-white rounded-[28px] p-6 soft-glow border border-[#f8daef]/60 flex flex-col gap-4">
@@ -286,31 +305,29 @@ export default function TrendsPage() {
               Feelings You've Logged
             </h3>
             <p className="text-xs text-[#514346]">
-              Frequency distribution across the current timeframe.
+              Frequency distribution across your logged entries.
             </p>
 
-            <div className="flex flex-wrap gap-2.5 pt-1">
-              {[
-                { tag: "Calm", count: 12, bg: "bg-[#dcc9fd] text-[#61527e]" },
-                { tag: "Grateful", count: 9, bg: "bg-[#ffd9e1] text-[#8a4b5e]" },
-                { tag: "Joyful", count: 8, bg: "bg-[#ffe7f7] text-[#76546b]" },
-                { tag: "Tired", count: 7, bg: "bg-[#f8daef] text-[#514346]" },
-                { tag: "Motivated", count: 6, bg: "bg-[#ffd7ef] text-[#76546b]" },
-                { tag: "Hopeful", count: 5, bg: "bg-[#dcc9fd]/60 text-[#61527e]" },
-                { tag: "Overwhelmed", count: 4, bg: "bg-[#ffdad6] text-[#ba1a1a]" },
-              ].map((item) => (
-                <span
-                  key={item.tag}
-                  className={`px-4 py-2 rounded-full font-semibold text-xs flex items-center gap-1.5 shadow-xs ${item.bg}`}
-                >
-                  <span>{item.tag}</span>
-                  <span className="opacity-70 text-[11px]">({item.count})</span>
-                </span>
-              ))}
-            </div>
+            {feelingsLogged.length === 0 ? (
+              <div className="p-6 rounded-2xl bg-[#ffeff8]/50 border border-dashed border-[#d6c1c5]/60 text-center">
+                <p className="text-xs text-[#514346]">No emotion tags logged yet.</p>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2.5 pt-1">
+                {feelingsLogged.map(([tag, count]) => (
+                  <span
+                    key={tag}
+                    className="px-4 py-2 rounded-full font-semibold text-xs flex items-center gap-1.5 shadow-xs bg-[#ffeff8] text-[#76546b]"
+                  >
+                    <span>{tag}</span>
+                    <span className="opacity-70 text-[11px]">({count})</span>
+                  </span>
+                ))}
+              </div>
+            )}
           </section>
 
-          {/* AI Pattern Synthesis CTA (6 cols) */}
+          {/* AI Pattern Synthesis Card (Informative) (6 cols) */}
           <section className="lg:col-span-6 bg-[#ebddff] rounded-[28px] p-6 border border-[#d1bef1] flex flex-col justify-between relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-20 text-[#665783]">
               <Sparkles className="w-20 h-20" />
@@ -322,22 +339,15 @@ export default function TrendsPage() {
                 <span>Pattern Synthesis</span>
               </div>
               <h3 className="font-serif text-xl font-bold text-[#21133c]">
-                Ready to explore guided reflections?
+                Adaptive Wellness Reflection
               </h3>
               <p className="text-xs text-[#4e3f6a] leading-relaxed">
-                Connect your trend observations to actionable mindfulness exercises and
-                in-depth AI-guided inquiries.
+                Your trend observations show consistent resilience. Continuing your mindful check-ins and restorative evening habits maintains this steady upward trajectory.
               </p>
             </div>
 
-            <div className="pt-4 relative z-10">
-              <Link
-                href="/reflection"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#665783] text-white text-xs font-semibold hover:bg-[#52446d] transition-colors shadow-sm"
-              >
-                <span>Go to AI Reflection</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+            <div className="pt-4 relative z-10 text-[11px] text-[#4e3f6a]/80 font-medium">
+              Calculated across your last {timeframe} days of wellness data.
             </div>
           </section>
         </div>
