@@ -36,6 +36,8 @@ const availableFactors = [
   "Nature",
 ];
 
+import { submitCheckIn, submitJournalEntry } from "@/lib/api";
+
 export default function CheckinPage() {
   const router = useRouter();
   const { addCheckIn, addJournalEntry } = useApp();
@@ -49,6 +51,7 @@ export default function CheckinPage() {
   ]);
   const [note, setNote] = useState<string>("");
   const [submitted, setSubmitted] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const toggleFactor = (factor: string) => {
     setSelectedFactors((prev) =>
@@ -56,11 +59,12 @@ export default function CheckinPage() {
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const currentMoodObj =
       moodOptions.find((m) => m.val === selectedMood) || moodOptions[2];
 
+    // 1. Update local AppContext
     addCheckIn({
       mood: selectedMood,
       moodLabel: currentMoodObj.label as
@@ -84,8 +88,36 @@ export default function CheckinPage() {
       });
     }
 
+    // 2. Persist to FastAPI & Supabase PostgreSQL
+    try {
+      setIsSubmitting(true);
+      await submitCheckIn({
+        mood_score: selectedMood,
+        mood_label: currentMoodObj.label,
+        mood_emoji: currentMoodObj.emoji,
+        stress_level: stress,
+        energy_level: energy,
+        factors: selectedFactors,
+        note: note.trim() || undefined,
+      });
+
+      if (note.trim().length > 0) {
+        await submitJournalEntry({
+          title: `Daily Check-in Note (${currentMoodObj.label})`,
+          content: note.trim(),
+          tags: selectedFactors.slice(0, 3),
+          sentiment: selectedMood >= 4 ? "Positive" : selectedMood === 3 ? "Calm" : "Reflective",
+        });
+      }
+    } catch (err) {
+      console.error("Failed to persist checkin to backend:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
+
     setSubmitted(true);
   };
+
 
   return (
     <AppLayout
@@ -115,22 +147,28 @@ export default function CheckinPage() {
                 Check-in Recorded!
               </h2>
               <p className="text-sm text-[#514346] mt-2 max-w-md mx-auto">
-                Thank you for honoring your mental wellness today. Your trends and AI
+                Thank you for honoring your mental wellness today. Your mood board and AI
                 insights have been updated.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-4 justify-center mt-2">
               <button
-                onClick={() => router.push("/reflection")}
-                className="px-6 py-3 rounded-full bg-[#8a4b5e] text-white text-sm font-semibold hover:bg-[#733e4e] transition-colors shadow-sm flex items-center gap-2"
+                onClick={() => router.push("/mood-board")}
+                className="px-6 py-3 rounded-full bg-[#8a4b5e] text-white text-sm font-semibold hover:bg-[#733e4e] transition-colors shadow-sm flex items-center gap-2 cursor-pointer"
               >
-                <span>View AI Reflection</span>
+                <span>View Mood Board</span>
                 <Sparkles className="w-4 h-4" />
               </button>
               <button
+                onClick={() => router.push("/reflection")}
+                className="px-6 py-3 rounded-full bg-[#ffeff8] text-[#8a4b5e] border border-[#d6c1c5]/60 text-sm font-semibold hover:bg-[#fee0f5] transition-colors cursor-pointer"
+              >
+                AI Reflection
+              </button>
+              <button
                 onClick={() => router.push("/dashboard")}
-                className="px-6 py-3 rounded-full bg-[#ffeff8] text-[#8a4b5e] border border-[#d6c1c5]/60 text-sm font-semibold hover:bg-[#fee0f5] transition-colors"
+                className="px-6 py-3 rounded-full bg-[#ffeff8] text-[#8a4b5e] border border-[#d6c1c5]/60 text-sm font-semibold hover:bg-[#fee0f5] transition-colors cursor-pointer"
               >
                 Back to Dashboard
               </button>
@@ -323,9 +361,10 @@ export default function CheckinPage() {
               </span>
               <button
                 type="submit"
-                className="w-full sm:w-auto px-10 py-4 rounded-full bg-[#8a4b5e] text-white font-semibold text-sm hover:bg-[#733e4e] transition-colors shadow-md flex items-center justify-center gap-2 group cursor-pointer"
+                disabled={isSubmitting}
+                className="w-full sm:w-auto px-10 py-4 rounded-full bg-[#8a4b5e] text-white font-semibold text-sm hover:bg-[#733e4e] transition-colors shadow-md flex items-center justify-center gap-2 group cursor-pointer disabled:opacity-50"
               >
-                <span>Complete Check-in</span>
+                <span>{isSubmitting ? "Saving Check-in..." : "Complete Check-in"}</span>
                 <span className="text-base group-hover:rotate-12 transition-transform leading-none">
                   ✦
                 </span>

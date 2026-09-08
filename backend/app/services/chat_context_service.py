@@ -8,12 +8,14 @@ from app.models.checkin import CheckIn
 from app.models.journal import JournalEntry
 from app.models.conversation import Conversation
 from app.models.message import Message
+from app.models.micro_goal import MicroGoal
+from datetime import datetime, timezone
 
 
 class ChatContextService:
     """
     Constructs a controlled, bounded, and user-isolated context pipeline
-    from MindEase check-ins, journal entries, and conversation history.
+    from MindEase check-ins, journal entries, conversation history, and micro goals.
     """
 
     @classmethod
@@ -48,7 +50,20 @@ class ChatContextService:
         journal_result = await db.execute(journal_query)
         journals: List[JournalEntry] = list(journal_result.scalars().all())
 
-        # 3. Fetch conversation & recent history
+        # 3. Fetch today's micro goals
+        today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        goal_query = (
+            select(MicroGoal)
+            .where(
+                MicroGoal.user_id == user_id,
+                MicroGoal.goal_date == today_str,
+            )
+            .order_by(MicroGoal.created_at.asc())
+        )
+        goal_result = await db.execute(goal_query)
+        today_goals: List[MicroGoal] = list(goal_result.scalars().all())
+
+        # 4. Fetch conversation & recent history
         conversation: Optional[Conversation] = None
         history_messages: List[Message] = []
 
@@ -72,11 +87,12 @@ class ChatContextService:
                 # Reverse to maintain chronological order
                 history_messages = list(reversed(msg_result.scalars().all()))
 
-        # 4. Synthesize compact summaries
+        # 5. Synthesize compact summaries
         checkin_summary = cls._summarize_checkins(checkins)
         journal_summary = cls._summarize_journals(journals, settings.CHAT_MAX_JOURNAL_CHARS)
+        goals_summary = cls._summarize_goals(today_goals)
 
-        # 5. Format compact system context block
+        # 6. Format compact system context block
         context_parts = []
 
         if conversation and conversation.summary:
@@ -87,6 +103,9 @@ class ChatContextService:
 
         if journal_summary:
             context_parts.append(f"Recent Journal Reflections:\n{journal_summary}")
+
+        if goals_summary:
+            context_parts.append(f"Today's Micro Goals:\n{goals_summary}")
 
         combined_context = "\n\n".join(context_parts)
 
@@ -109,7 +128,9 @@ class ChatContextService:
             "formatted_history": formatted_history,
             "checkin_count": len(checkins),
             "journal_count": len(journals),
+            "today_goals_count": len(today_goals),
         }
+
 
     @staticmethod
     def _summarize_checkins(checkins: List[CheckIn]) -> Optional[str]:
@@ -163,3 +184,23 @@ class ChatContextService:
             lines.append(f"- ({date_str}) {title_str} [Tags: {tags_str}]: \"{content_preview}\"")
 
         return "\n".join(lines)
+
+    @staticmethod
+    def _summarize_goals(goals: List[MicroGoal]) -> Optional[str]:
+        if not goals:
+            return None
+
+        lines = []
+        completed = [g for g in goals if g.completed]
+        pending = [g for g in goals if not g.completed]
+
+        lines.append(f"- Progress: {len(completed)} of {len(goals)} completed")
+        if completed:
+            done_items = ", ".join(f"'{g.goal_text}'" for g in completed[:3])
+            lines.append(f"- Completed: {done_items}")
+        if pending:
+            todo_items = ", ".join(f"'{g.goal_text}'" for g in pending[:3])
+            lines.append(f"- Active/Pending: {todo_items}")
+
+        return "\n".join(lines)
+

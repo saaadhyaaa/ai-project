@@ -4,6 +4,9 @@ from app.models.checkin import CheckIn
 from app.models.journal import JournalEntry
 from app.models.conversation import Conversation
 from app.models.message import Message
+from app.models.micro_goal import MicroGoal
+from app.models.daily_summary import DailySummary
+from app.models.weekly_summary import WeeklySummary
 
 __all__ = [
     "Base",
@@ -12,4 +15,8 @@ __all__ = [
     "JournalEntry",
     "Conversation",
     "Message",
+    "MicroGoal",
+    "DailySummary",
+    "WeeklySummary",
 ]
+

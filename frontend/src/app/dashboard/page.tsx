@@ -11,11 +11,15 @@ import {
   HeartHandshake,
 } from "lucide-react";
 
+import { MicroGoalsWidget } from "@/components/mood-board/MicroGoalsWidget";
+
+import { submitCheckIn } from "@/lib/api";
+
 export default function DashboardPage() {
   const router = useRouter();
   const { userName, checkIns, journalEntries, addCheckIn, stats } = useApp();
 
-  const handleQuickMood = (
+  const handleQuickMood = async (
     moodValue: number,
     moodLabel: "Terrible" | "Bad" | "Okay" | "Good" | "Great",
     moodEmoji: string
@@ -29,8 +33,24 @@ export default function DashboardPage() {
       factors: ["Mindfulness"],
       note: "Logged from quick dashboard mood picker.",
     });
+
+    try {
+      await submitCheckIn({
+        mood_score: moodValue,
+        mood_label: moodLabel,
+        mood_emoji: moodEmoji,
+        stress_level: 4,
+        energy_level: 7,
+        factors: ["Mindfulness"],
+        note: "Logged from quick dashboard mood picker.",
+      });
+    } catch (err) {
+      console.error("Failed to submit quick checkin:", err);
+    }
+
     router.push("/checkin");
   };
+
 
   const latestJournal = journalEntries[0];
 
@@ -236,11 +256,15 @@ export default function DashboardPage() {
               </div>
             </div>
 
+            {/* Today's Micro Goals Widget */}
+            <MicroGoalsWidget />
+
             {/* Recent Reflections Card (Informative) */}
             <div className="bg-white rounded-[28px] p-6 soft-glow border border-[#f8daef]/60 flex flex-col gap-4">
               <h3 className="font-serif text-lg font-bold text-[#271624]">
                 Recent Reflection
               </h3>
+
 
               {latestJournal ? (
                 <div className="p-4 rounded-2xl bg-[#ffeff8] border border-[#d6c1c5]/30 flex flex-col gap-2">

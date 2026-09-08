@@ -21,6 +21,12 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
       active: pathname === "/dashboard" || pathname === "/",
     },
     {
+      name: "Mood Board",
+      href: "/mood-board",
+      icon: "calendar_month",
+      active: pathname === "/mood-board",
+    },
+    {
       name: "AI Companion",
       href: "/chat",
       icon: "forum",

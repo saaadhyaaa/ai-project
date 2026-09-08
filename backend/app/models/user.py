@@ -10,6 +10,9 @@ if TYPE_CHECKING:
     from app.models.checkin import CheckIn
     from app.models.journal import JournalEntry
     from app.models.conversation import Conversation
+    from app.models.micro_goal import MicroGoal
+    from app.models.daily_summary import DailySummary
+    from app.models.weekly_summary import WeeklySummary
 
 
 class User(Base):
@@ -63,6 +66,25 @@ class User(Base):
         cascade="all, delete-orphan",
         order_by="desc(Conversation.updated_at)",
     )
+    micro_goals: Mapped[List["MicroGoal"]] = relationship(
+        "MicroGoal",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="desc(MicroGoal.created_at)",
+    )
+    daily_summaries: Mapped[List["DailySummary"]] = relationship(
+        "DailySummary",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="desc(DailySummary.summary_date)",
+    )
+    weekly_summaries: Mapped[List["WeeklySummary"]] = relationship(
+        "WeeklySummary",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="desc(WeeklySummary.week_start_date)",
+    )
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email}>"
+

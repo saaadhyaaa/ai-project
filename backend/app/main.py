@@ -5,13 +5,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.database import check_db_connection
 from app.api.v1.chat import router as chat_router
+from app.api.v1.mood_board import router as mood_board_router
+from app.api.v1.micro_goals import router as micro_goals_router
+from app.api.v1.checkin import router as checkin_router
+from app.api.v1.journal import router as journal_router
 
 settings = get_settings()
 
 app = FastAPI(
     title=settings.APP_NAME,
-    version="0.2.0",
-    description="Backend API for AI-Powered Emotional Well-Being Monitoring Assistant with Companion Chatbot",
+    version="0.3.0",
+    description="Backend API for MindEase AI Wellness Assistant with Companion Chatbot, Mood Board, and Micro Goals",
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -27,6 +31,12 @@ app.add_middleware(
 
 # Mount API Routers
 app.include_router(chat_router)
+app.include_router(mood_board_router)
+app.include_router(micro_goals_router)
+app.include_router(checkin_router)
+app.include_router(journal_router)
+
+
 
 
 @app.get("/", tags=["General"])

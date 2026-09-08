@@ -24,6 +24,8 @@ const availableEmotionTags = [
   "Hopeful",
 ];
 
+import { submitJournalEntry } from "@/lib/api";
+
 export default function JournalPage() {
   const { journalEntries, addJournalEntry, deleteJournalEntry } = useApp();
 
@@ -40,15 +42,30 @@ export default function JournalPage() {
     );
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
 
+    const trimmedTitle = title.trim() || "Daily Reflection";
+
+    // 1. Local context update
     addJournalEntry({
-      title: title.trim() || "Daily Reflection",
+      title: trimmedTitle,
       content,
       tags: selectedTags,
     });
+
+    // 2. Persist to backend
+    try {
+      await submitJournalEntry({
+        title: trimmedTitle,
+        content: content.trim(),
+        tags: selectedTags,
+        sentiment: selectedTags.includes("Overwhelmed") || selectedTags.includes("Anxious") ? "Reflective" : "Calm",
+      });
+    } catch (err) {
+      console.error("Failed to persist journal entry to backend:", err);
+    }
 
     setTitle("");
     setContent("");
@@ -56,6 +73,7 @@ export default function JournalPage() {
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3500);
   };
+
 
   const filteredEntries = journalEntries.filter((entry) => {
     const matchesSearch =
