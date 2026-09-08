@@ -9,6 +9,7 @@ from app.database import Base
 if TYPE_CHECKING:
     from app.models.checkin import CheckIn
     from app.models.journal import JournalEntry
+    from app.models.conversation import Conversation
 
 
 class User(Base):
@@ -55,6 +56,12 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
         order_by="desc(JournalEntry.created_at)",
+    )
+    conversations: Mapped[List["Conversation"]] = relationship(
+        "Conversation",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="desc(Conversation.updated_at)",
     )
 
     def __repr__(self) -> str:

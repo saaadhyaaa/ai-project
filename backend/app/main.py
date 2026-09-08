@@ -4,13 +4,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import check_db_connection
+from app.api.v1.chat import router as chat_router
 
 settings = get_settings()
 
 app = FastAPI(
     title=settings.APP_NAME,
-    version="0.1.0",
-    description="Backend API for AI-Powered Emotional Well-Being Monitoring Assistant",
+    version="0.2.0",
+    description="Backend API for AI-Powered Emotional Well-Being Monitoring Assistant with Companion Chatbot",
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -24,6 +25,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount API Routers
+app.include_router(chat_router)
+
 
 @app.get("/", tags=["General"])
 async def root():
@@ -32,7 +36,7 @@ async def root():
     """
     return {
         "app": settings.APP_NAME,
-        "version": "0.1.0",
+        "version": "0.2.0",
         "status": "online",
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }

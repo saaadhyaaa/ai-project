@@ -8,6 +8,16 @@ from app.schemas.journal import (
     CreateJournalEntry,
     JournalEntryResponse,
 )
+from app.schemas.chat import (
+    ChatMessageRequest,
+    ProviderCard,
+    ChatResponse,
+    ChatAIResponse,
+    MessageResponse,
+    ConversationSummary,
+    ConversationDetail,
+    CrisisResource,
+)
 
 __all__ = [
     "CheckInBase",
@@ -16,4 +26,12 @@ __all__ = [
     "JournalEntryBase",
     "CreateJournalEntry",
     "JournalEntryResponse",
+    "ChatMessageRequest",
+    "ProviderCard",
+    "ChatResponse",
+    "ChatAIResponse",
+    "MessageResponse",
+    "ConversationSummary",
+    "ConversationDetail",
+    "CrisisResource",
 ]

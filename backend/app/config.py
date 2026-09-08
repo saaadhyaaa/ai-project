@@ -1,6 +1,6 @@
 import os
 from functools import lru_cache
-from typing import List, Union
+from typing import List, Optional, Union
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -20,6 +20,19 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ]
+
+    # Gemini AI Engine Configuration
+    GEMINI_API_KEY: Optional[str] = None
+    GEMINI_MODEL: str = "gemini-3.1-flash-lite"
+
+    # Token & Context Budget Protection Limits
+    CHAT_MAX_HISTORY_MESSAGES: int = 15
+    CHAT_MAX_CHECKINS: int = 10
+    CHAT_MAX_JOURNAL_ENTRIES: int = 5
+    CHAT_MAX_JOURNAL_CHARS: int = 500
+    CHAT_MAX_CONTEXT_CHARS: int = 8000
+    CHAT_MAX_OUTPUT_TOKENS: int = 1024
+    CHAT_MAX_USER_MESSAGE_CHARS: int = 2000
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
