@@ -45,10 +45,10 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
       active: pathname === "/checkin",
     },
     {
-      name: "AI Reflection",
-      href: "/reflection",
-      icon: "auto_awesome",
-      active: pathname === "/reflection",
+      name: "Calm & Reset",
+      href: "/calm",
+      icon: "air",
+      active: pathname === "/calm",
     },
     {
       name: "Trends",

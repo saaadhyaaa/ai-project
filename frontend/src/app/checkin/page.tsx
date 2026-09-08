@@ -161,10 +161,10 @@ export default function CheckinPage() {
                 <Sparkles className="w-4 h-4" />
               </button>
               <button
-                onClick={() => router.push("/reflection")}
+                onClick={() => router.push("/calm")}
                 className="px-6 py-3 rounded-full bg-[#ffeff8] text-[#8a4b5e] border border-[#d6c1c5]/60 text-sm font-semibold hover:bg-[#fee0f5] transition-colors cursor-pointer"
               >
-                AI Reflection
+                Calm & Reset
               </button>
               <button
                 onClick={() => router.push("/dashboard")}

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Plus, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Plus, Check, Wind, Sparkles } from "lucide-react";
 import { createMicroGoal } from "@/lib/api";
 
 interface SuggestionCardProps {
@@ -15,8 +16,33 @@ export function SuggestionCard({
   onClick,
   disabled = false,
 }: SuggestionCardProps) {
+  const router = useRouter();
   const [added, setAdded] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Check if suggestion relates to breathing or calming exercises
+  const lower = suggestion.toLowerCase();
+  let calmUrl: string | null = null;
+  if (lower.includes("4-7-8") || lower.includes("478")) {
+    calmUrl = "/calm?exercise=478";
+  } else if (lower.includes("box")) {
+    calmUrl = "/calm?exercise=box";
+  } else if (lower.includes("equal")) {
+    calmUrl = "/calm?exercise=equal";
+  } else if (lower.includes("deep breath")) {
+    calmUrl = "/calm?exercise=deep";
+  } else if (lower.includes("extended exhale") || lower.includes("exhale")) {
+    calmUrl = "/calm?exercise=extended";
+  } else if (
+    lower.includes("breath") ||
+    lower.includes("calm") ||
+    lower.includes("reset") ||
+    lower.includes("sound") ||
+    lower.includes("rain") ||
+    lower.includes("ocean")
+  ) {
+    calmUrl = "/calm";
+  }
 
   const handleAddGoal = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -38,6 +64,13 @@ export function SuggestionCard({
     }
   };
 
+  const handleOpenCalm = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (calmUrl) {
+      router.push(calmUrl);
+    }
+  };
+
   return (
     <div className="inline-flex items-center rounded-full bg-[#ffeff8] border border-[#d6c1c5]/60 overflow-hidden shadow-xs hover:border-[#d98fa3] transition-all">
       <button
@@ -50,6 +83,20 @@ export function SuggestionCard({
         <span>{suggestion}</span>
       </button>
 
+      {/* Quick Calm & Reset Link if suggestion is calming practice */}
+      {calmUrl && (
+        <button
+          type="button"
+          onClick={handleOpenCalm}
+          title="Open practice in Calm & Reset"
+          className="px-2.5 py-1.5 text-[11px] font-bold border-l border-[#d6c1c5]/50 flex items-center gap-1 text-[#61527e] hover:bg-[#ebddff] transition-colors cursor-pointer"
+        >
+          <Wind className="w-3 h-3 text-[#61527e]" />
+          <span className="hidden sm:inline">Calm</span>
+        </button>
+      )}
+
+      {/* Add as Today's Micro Goal Action */}
       <button
         type="button"
         onClick={handleAddGoal}

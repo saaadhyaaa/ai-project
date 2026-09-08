@@ -244,7 +244,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-2 text-[#61527e] mb-2">
                   <Sparkles className="w-5 h-5" />
                   <span className="text-xs font-bold uppercase tracking-wider">
-                    AI Reflection
+                    Mindful Insight
                   </span>
                 </div>
                 <h3 className="font-serif text-xl font-bold text-[#21133c] leading-snug">
