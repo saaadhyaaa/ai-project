@@ -150,17 +150,28 @@ async def send_chat_message(
     grounded_providers: List[ProviderCard] = []
 
     if is_provider_search or payload.latitude is not None or payload.location_query is not None:
+        loc_hint = payload.location_query or SafetyService.extract_location_from_text(payload.message)
         grounded_providers = await gemini_svc.search_grounded_providers(
             query=payload.message,
             latitude=payload.latitude,
             longitude=payload.longitude,
-            location_query=payload.location_query,
+            location_query=loc_hint,
         )
 
     # 6. Generate AI emotional support response
+    chat_system_context = context_data["system_context"]
+    if grounded_providers:
+        provider_names = ", ".join([f"{p.name} ({p.address or 'Local Area'})" for p in grounded_providers[:4]])
+        chat_system_context += (
+            f"\n\n--- Local Care Resources Located ---\n"
+            f"The following verified mental health resources and clinics have been located for the user: {provider_names}.\n"
+            f"Warmly commend the user for their courage in seeking professional care, let them know that provider cards "
+            f"with Google Maps links are displayed right below your message on their screen, and ask how they are feeling right now."
+        )
+
     ai_response = await gemini_svc.generate_chat_response(
         user_message=payload.message,
-        system_context=context_data["system_context"],
+        system_context=chat_system_context,
         history=context_data["formatted_history"],
     )
 

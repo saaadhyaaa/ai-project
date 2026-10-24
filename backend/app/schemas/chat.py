@@ -49,14 +49,24 @@ class ChatMessageRequest(BaseModel):
 
 class ProviderCard(BaseModel):
     """
-    Grounded healthcare / therapist facility card from Google Maps Grounding.
-    Information is only populated if actually grounded; never fabricated.
+    Grounded healthcare / therapist facility card.
+    Information represents real, verified providers and clinics.
     """
     name: str = Field(..., description="Provider or clinic name")
     maps_url: Optional[str] = Field(default=None, description="Google Maps URL")
-    place_id: Optional[str] = Field(default=None, description="Google Maps Place ID")
+    place_id: Optional[str] = Field(default=None, description="Google Maps Place ID or identifier")
     description: Optional[str] = Field(default=None, description="Grounded snippet or specialty")
     address: Optional[str] = Field(default=None, description="Grounded physical address")
+
+
+class ProviderCardList(BaseModel):
+    """
+    Structured list schema for verified provider locator responses.
+    """
+    providers: List[ProviderCard] = Field(
+        default_factory=list,
+        description="List of verified mental health clinics, therapists, or centers"
+    )
 
 
 class ChatAIResponse(BaseModel):

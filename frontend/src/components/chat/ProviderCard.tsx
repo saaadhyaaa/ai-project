@@ -9,10 +9,11 @@ interface ProviderCardProps {
 
 export function ProviderCard({ provider }: ProviderCardProps) {
   const mapsUrl =
-    provider.maps_url ||
-    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-      provider.name + (provider.address ? ` ${provider.address}` : "")
-    )}`;
+    provider.maps_url && !provider.maps_url.includes("maps.app.goo.gl")
+      ? provider.maps_url
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+          provider.name + (provider.address ? ` ${provider.address}` : "")
+        )}`;
 
   return (
     <div className="bg-white rounded-2xl p-4 border border-[#f8daef] soft-glow flex flex-col justify-between gap-3 transition-all hover:border-[#d98fa3]/50">

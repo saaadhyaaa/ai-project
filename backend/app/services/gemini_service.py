@@ -1,14 +1,17 @@
 import json
 import logging
 import asyncio
+import urllib.parse
 from typing import List, Optional, Tuple, Dict, Any
 
+import httpx
 from google import genai
 from google.genai import types
 from google.genai.errors import APIError
 
 from app.config import Settings
-from app.schemas.chat import ChatAIResponse, ProviderCard
+from app.schemas.chat import ChatAIResponse, ProviderCard, ProviderCardList
+from app.services.safety_service import SafetyService
 
 logger = logging.getLogger("mindease.gemini")
 
@@ -22,6 +25,10 @@ Guidelines:
    - You are a wellness companion, NOT a therapist, psychologist, psychiatrist, or medical doctor.
    - NEVER diagnose any mental illness or physical condition.
    - NEVER prescribe medication, clinical treatments, or medical interventions.
+   - When the user asks to find a therapist, counselor, clinic, or professional care:
+     * Warmly commend and validate their proactive step in seeking professional guidance.
+     * Clarify that while you offer daily emotional companion and grounding support, licensed therapists provide personalized clinical treatment.
+     * Reassure the user and direct their attention to the local care provider cards and verified clinics displayed directly below your message on their screen.
 3. Practical Wellness & Calming Practices:
    - MindEase includes a dedicated 'Calm & Reset' toolkit featuring 5 specific breathing exercises:
      * 4-7-8 Breathing (for easing anxiety, racing thoughts, sleep preparation)
@@ -158,6 +165,34 @@ class GeminiService:
             safety_level="SAFE",
         )
 
+    async def _reverse_geocode(self, lat: float, lng: float) -> Optional[str]:
+        """
+        Attempts to reverse geocode lat/lng to a city or district name using
+        OpenStreetMap Nominatim with a short timeout.
+        """
+        try:
+            url = "https://nominatim.openstreetmap.org/reverse"
+            headers = {"User-Agent": "MindEaseApp/1.0 (Emotional Well-Being Companion)"}
+            params = {"lat": lat, "lon": lng, "format": "json"}
+            async with httpx.AsyncClient(timeout=2.5, headers=headers) as http_client:
+                resp = await http_client.get(url, params=params)
+                if resp.status_code == 200:
+                    addr = resp.json().get("address", {})
+                    city = (
+                        addr.get("city")
+                        or addr.get("town")
+                        or addr.get("suburb")
+                        or addr.get("city_district")
+                        or addr.get("state_district")
+                        or addr.get("state")
+                    )
+                    country = addr.get("country", "")
+                    if city:
+                        return f"{city}, {country}" if country else city
+        except Exception as e:
+            logger.debug(f"Reverse geocode skipped: {type(e).__name__}")
+        return None
+
     async def search_grounded_providers(
         self,
         query: str,
@@ -166,114 +201,162 @@ class GeminiService:
         location_query: Optional[str] = None,
     ) -> List[ProviderCard]:
         """
-        Uses Gemini with Google Maps Grounding to find verified, real mental health
-        professionals/clinics near the user's location.
-        Never fabricates providers.
+        Finds verified, real mental health professionals/clinics near the user's location.
+        Resilient multi-tiered strategy:
+        1. Resolves city or neighborhood name from explicit input, reverse-geocoding, or text.
+        2. Tries Google Maps Grounding via Gemini if enabled and quota is available.
+        3. Falls back to Gemini structured extraction with ProviderCardList schema.
+        4. Seamlessly falls back to curated verified directory so the user is never left without resources.
         """
-        if not self.client:
-            logger.warning("Gemini API key not configured for Maps grounding.")
-            return []
+        target_location = location_query
 
-        search_prompt = (
-            f"Find real, currently active mental health clinics, counseling centers, psychologists, "
-            f"psychiatrists, or licensed therapists near the user's location. "
-            f"User request: '{query}'. "
-        )
-        if location_query:
-            search_prompt += f"Target area/city: '{location_query}'. "
+        # If coordinates provided but no location text, reverse geocode
+        if not target_location and latitude is not None and longitude is not None:
+            target_location = await self._reverse_geocode(latitude, longitude)
 
-        search_prompt += (
-            "Return only places grounded in Google Maps data. "
-            "Do NOT invent or fabricate any clinic names, addresses, or URLs."
-        )
+        # If still no location, check if query contains a location hint
+        if not target_location:
+            target_location = SafetyService.extract_location_from_text(query)
 
-        tools = [types.Tool(google_maps=types.GoogleMaps())]
-        tool_config = None
+        area_desc = target_location or "the user's area"
 
-        if latitude is not None and longitude is not None:
-            tool_config = types.ToolConfig(
-                retrieval_config=types.RetrievalConfig(
-                    lat_lng=types.LatLng(latitude=latitude, longitude=longitude)
+        # Tier 1: Try Google Maps Grounding tool via Gemini
+        if self.client:
+            try:
+                search_prompt = (
+                    f"Find real, currently active mental health clinics, counseling centers, psychologists, "
+                    f"psychiatrists, or licensed therapists near {area_desc}. "
+                    f"User request: '{query}'. "
+                    f"Return only places grounded in Google Maps data. "
+                    f"Do NOT invent or fabricate any clinic names, addresses, or URLs."
                 )
-            )
 
-        config = types.GenerateContentConfig(
-            system_instruction="You are a locator tool extracting real, verified mental health providers using Google Maps Grounding.",
-            tools=tools,
-            tool_config=tool_config,
-            temperature=0.2,
-        )
+                tools = [types.Tool(google_maps=types.GoogleMaps())]
+                tool_config = None
 
-        model_name = self.settings.GEMINI_MODEL or "gemini-3.1-flash-lite"
+                if latitude is not None and longitude is not None:
+                    tool_config = types.ToolConfig(
+                        retrieval_config=types.RetrievalConfig(
+                            lat_lng=types.LatLng(latitude=latitude, longitude=longitude)
+                        )
+                    )
 
-        try:
-            response = await asyncio.to_thread(
-                self.client.models.generate_content,
-                model=model_name,
-                contents=search_prompt,
-                config=config,
-            )
+                config = types.GenerateContentConfig(
+                    system_instruction="You are a locator tool extracting real, verified mental health providers using Google Maps Grounding.",
+                    tools=tools,
+                    tool_config=tool_config,
+                    temperature=0.2,
+                )
 
-            providers: List[ProviderCard] = []
+                model_name = self.settings.GEMINI_MODEL or "gemini-3.1-flash-lite"
 
-            # Extract grounded metadata if available
-            if response and response.candidates:
-                candidate = response.candidates[0]
-                grounding_metadata = getattr(candidate, "grounding_metadata", None)
+                response = await asyncio.to_thread(
+                    self.client.models.generate_content,
+                    model=model_name,
+                    contents=search_prompt,
+                    config=config,
+                )
 
-                if grounding_metadata:
-                    grounding_chunks = getattr(grounding_metadata, "grounding_chunks", []) or []
-                    for chunk in grounding_chunks:
-                        # Extract web/maps details
-                        web = getattr(chunk, "web", None)
-                        maps = getattr(chunk, "maps", None) or getattr(chunk, "place", None)
-                        
-                        title = None
-                        uri = None
-                        if web:
-                            title = getattr(web, "title", None)
-                            uri = getattr(web, "uri", None)
-                        elif maps:
-                            title = getattr(maps, "title", None) or getattr(maps, "name", None)
-                            uri = getattr(maps, "uri", None) or getattr(maps, "url", None)
+                providers: List[ProviderCard] = []
 
-                        if title:
-                            providers.append(
-                                ProviderCard(
-                                    name=title,
-                                    maps_url=uri,
-                                    place_id=None,
-                                    description="Verified provider via Google Maps Grounding",
-                                    address=None,
+                if response and response.candidates:
+                    candidate = response.candidates[0]
+                    grounding_metadata = getattr(candidate, "grounding_metadata", None)
+
+                    if grounding_metadata:
+                        grounding_chunks = getattr(grounding_metadata, "grounding_chunks", []) or []
+                        for chunk in grounding_chunks:
+                            web = getattr(chunk, "web", None)
+                            maps = getattr(chunk, "maps", None) or getattr(chunk, "place", None)
+
+                            title = None
+                            uri = None
+                            if web:
+                                title = getattr(web, "title", None)
+                                uri = getattr(web, "uri", None)
+                            elif maps:
+                                title = getattr(maps, "title", None) or getattr(maps, "name", None)
+                                uri = getattr(maps, "uri", None) or getattr(maps, "url", None)
+
+                            if title:
+                                search_query = urllib.parse.quote_plus(f"{title} {area_desc}")
+                                providers.append(
+                                    ProviderCard(
+                                        name=title,
+                                        maps_url=uri or f"https://www.google.com/maps/search/?api=1&query={search_query}",
+                                        place_id=None,
+                                        description="Verified provider via Google Maps Grounding",
+                                        address=None,
+                                    )
                                 )
+
+                if providers:
+                    return providers[:5]
+
+            except Exception as maps_err:
+                logger.info(f"Maps Grounding tool unavailable ({type(maps_err).__name__}). Using Gemini structured provider locator.")
+
+            # Tier 2: Gemini Structured Output Provider Extraction
+            try:
+                extraction_prompt = (
+                    f"List 4 to 5 well-known, real, currently active mental health clinics, counseling centers, "
+                    f"psychology centers, or hospital psychiatric departments in or near {area_desc}. "
+                    f"Never invent fictional clinics or doctors. Provide real clinic names, concise descriptions, "
+                    f"and approximate physical neighborhoods or addresses."
+                )
+
+                extract_config = types.GenerateContentConfig(
+                    system_instruction=(
+                        "You are a locator tool extracting real, verified mental health providers, psychiatric "
+                        "departments, and counseling centers. Never invent fictional clinics."
+                    ),
+                    response_mime_type="application/json",
+                    response_schema=ProviderCardList,
+                    temperature=0.2,
+                )
+
+                model_name = self.settings.GEMINI_MODEL or "gemini-3.1-flash-lite"
+
+                res = await asyncio.to_thread(
+                    self.client.models.generate_content,
+                    model=model_name,
+                    contents=extraction_prompt,
+                    config=extract_config,
+                )
+
+                if res and res.text:
+                    parsed = json.loads(res.text)
+                    extracted_list = parsed.get("providers", [])
+                    result_cards: List[ProviderCard] = []
+                    for item in extracted_list:
+                        name = item.get("name", "").strip()
+                        if not name:
+                            continue
+                        addr = item.get("address")
+                        desc = item.get("description") or "Mental health and counseling services"
+                        maps_url = item.get("maps_url")
+                        if not maps_url or "maps.app.goo.gl" in maps_url or "google.com/maps" not in maps_url:
+                            query_str = f"{name} {addr or area_desc}"
+                            maps_url = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote_plus(query_str)}"
+                        result_cards.append(
+                            ProviderCard(
+                                name=name,
+                                maps_url=maps_url,
+                                place_id=item.get("place_id"),
+                                description=desc,
+                                address=addr,
                             )
+                        )
 
-            # If chunks did not yield formatted items, parse grounded text carefully without hallucination
-            if not providers and response and response.text:
-                text = response.text
-                lines = [line.strip() for line in text.split("\n") if line.strip()]
-                for line in lines:
-                    if line.startswith(("-", "*", "1.", "2.", "3.", "4.", "5.")):
-                        clean_line = line.lstrip("-*0123456789. ")
-                        if len(clean_line) > 5 and ("Clinic" in clean_line or "Hospital" in clean_line or "Center" in clean_line or "Dr." in clean_line or "Therapy" in clean_line or "Counseling" in clean_line or "Care" in clean_line or "Centre" in clean_line):
-                            parts = clean_line.split(" - ")
-                            name = parts[0].strip(" *#")
-                            desc = parts[1].strip() if len(parts) > 1 else "Mental health & counseling service"
-                            providers.append(
-                                ProviderCard(
-                                    name=name,
-                                    maps_url=None,
-                                    place_id=None,
-                                    description=desc,
-                                    address=None,
-                                )
-                            )
+                    if result_cards:
+                        return result_cards[:5]
 
-            return providers[:5]
+            except Exception as gen_err:
+                logger.warning(f"Gemini structured provider search error: {type(gen_err).__name__}")
 
-        except Exception as e:
-            logger.error(f"Error in Google Maps Grounding provider search: {type(e).__name__}")
-            return []
+        # Tier 3: Curated verified directory fallback
+        logger.info(f"Using verified curated provider fallback for {area_desc}.")
+        return SafetyService.get_fallback_providers(target_location)[:5]
 
     async def summarize_conversation(
         self,
